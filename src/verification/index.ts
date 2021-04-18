@@ -1,74 +1,53 @@
-import * as github from './github'
-import * as truffle from './truffle'
-import * as rpc from './rpc'
-import path from 'path'
-import fs from 'fs'
-import { verifyByteCode } from './verify'
+import * as github from "./github";
+import * as truffle from "./truffle";
+import * as rpc from "./rpc";
+import path from "path";
+import fs from "fs";
+import { verifyByteCode } from "./verify";
+import { arrayify } from "@ethersproject/bytes";
+import cbor from "cbor";
+import { execSync } from "child_process";
 
-export const codeVerification = async (
-  {
-    contractAddress,
-    solidityVersion,
-    githubURL,
-    chain
-  }
-) => {
-  const taskId = contractAddress
-  const directory = path.join(__dirname, '../', taskId)
+function getBytecodeAndMetadata(bytecode) {
+  const buff = Buffer.from(arrayify(bytecode));
+  const length = buff.readIntBE(buff.length - 2, 2);
+  const metadata = cbor.decode(buff.slice(buff.length - length - 2, buff.length - 2));
+  const runtimeBytecode = buff.slice(0, buff.length - length - 2);
+  return {
+    metadata,
+    runtimeBytecode,
+  };
+}
+
+export const codeVerification = async ({ contractAddress, abi, chain }) => {
+  const taskId = contractAddress;
+  // const directory = path.join(__dirname, "../../", taskId);
 
   try {
-  // todo validate address SDK hmy isAddress
-  // todo validate if folder already exist
+    // todo validate address SDK hmy isAddress
+    // todo validate if folder already exist
 
-  console.log('New task', { taskId, directory })
+    console.log("New task", { taskId });
 
-  console.log('Getting actual bytecode from the blockchain...')
-  const actualBytecode = await rpc.getSmartContractCode(chain, contractAddress)
+    console.log("Getting actual bytecode from the blockchain...");
+    const actualBytecode = await rpc.getSmartContractCode(chain, contractAddress);
 
-  if (!actualBytecode || actualBytecode === '0x') {
-    throw new Error(`No bytecode found for address ${contractAddress}`)
-  }
+    const {  runtimeBytecode } = getBytecodeAndMetadata(actualBytecode);
 
-  console.log('Cloning github...')
-  try {
-    await github.clone(githubURL, taskId)
-    console.log('Creating truffle config...')
-  } catch (e) {
-    // console.warn(e)
-  }
+    const { deployedBytecode } = JSON.parse(fs.readFileSync(abi, "utf-8"));
+    const res = getBytecodeAndMetadata(deployedBytecode);
 
-  await truffle.createConfiguration(solidityVersion, directory)
-  // await truffle.createMigration(directory, githubURL)
-  console.log('Installing contract dependencies...')
-  await truffle.installDependencies(directory)
-  console.log('Compiling...')
-  await truffle.compile(directory)
-  console.log('Getting compiled bytecode')
-  const { deployedBytecode, bytecode } = await truffle.getByteCode(githubURL, directory)
-
-  console.log('Cleaning up...')
-  const verified = verifyByteCode(actualBytecode, deployedBytecode, solidityVersion)
-
-  if (verified) {
-    const commitHash = await github.getCommitHash(directory)
+    const verified = runtimeBytecode.equals(arrayify(res.runtimeBytecode));
+    console.log("Verified:", verified);
 
     return {
       verified,
-      commitHash
-    }
-  }
-
-  } catch(error) {
+    };
+  } catch (error) {
+    console.log(error);
     return {
       verified: false,
-      error
-    }
+      error,
+    };
   }
-
-  fs.rmdirSync(directory, { recursive: true })
-
-  return {
-    verified: false,
-    error: 'No match'
-  }
-}
+};
