@@ -15,9 +15,11 @@ export const clone = async (githubUrl, directory) => {
     throw new Error ('Only contracts hosted on github are allowed')
   }
 
-  const actualUrl = githubUrl.split('/blob')[0]
+  const [actualUrl, rest] = githubUrl.split("/blob/");
+  const [branchOrCommit] = rest.split("/");
 
-  execSync(`git clone ${actualUrl} ${directory}`)
+  execSync(`git clone ${actualUrl} ${directory}`);
+  execSync(`cd ${directory} && git checkout ${branchOrCommit}`);
 };
 
 export const getCommitHash = async (directory) => {

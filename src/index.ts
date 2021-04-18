@@ -1,13 +1,22 @@
 import { codeVerification } from './verification/index'
 
 const run = async () => {
-const res = await codeVerification({
-    contractAddress: 'one1rcs4yy4kln53ux60qdeuhhvpygn2sutn500dhw',
+// const res = await codeVerification({
+//     contractAddress: 'one1rcs4yy4kln53ux60qdeuhhvpygn2sutn500dhw',
+//     githubURL:
+//       'https://github.com/rachit2501/Lottery-System/blob/master/contracts/Lottery.sol',
+//     solidityVersion: '0.4.17',
+//     chain: 'testnet'
+//   })
+
+  // https://explorer.testnet.harmony.one/#/address/one1s5nywed6g27jnx4hkxefnjstfgq0lygnf749xt
+  const res = await codeVerification({
+    contractAddress: "one1s5nywed6g27jnx4hkxefnjstfgq0lygnf749xt",
     githubURL:
-      'https://github.com/rachit2501/Lottery-System/blob/master/contracts/Lottery.sol',
-    solidityVersion: '0.4.17',
-    chain: 'testnet'
-  })
+      "https://github.com/harmony-one/davinci_nft_marketplace/blob/098733513ac38a9e80572ab1dcbfe098a16aecb3/contracts/token/DavinciToken.sol",
+    solidityVersion: "0.6.12",
+    chain: "testnet",
+  });
 
 
  /* const res = await codeVerification({

@@ -1,42 +1,24 @@
-const byteCodeStartBefore422 = '6060604052'
-const byteCodeStartAfter422 = '6080604052'
-const byteCodeEnd417 = 'a165627a7a72305820'
+import { arrayify } from "@ethersproject/bytes";
+import cbor from "cbor";
 
-const byteCodeEnd510 = 'a265627a7a72305820'
-const byteCodeEnd511 = 'a265627a7a72315820'
+// https://docs.soliditylang.org/en/latest/metadata.html#encoding-of-the-metadata-hash-in-the-bytecode
+export function getBytecodeAndMetadata(deployedBytecode: string) {
+  const buff = Buffer.from(arrayify(deployedBytecode));
+  const metadataLength = buff.readIntBE(buff.length - 2, 2);
+  const metadata = buff.slice(buff.length - metadataLength - 2, buff.length - 2);
+  const bytecode = buff.slice(0, buff.length - metadataLength - 2);
 
-//https://www.badykov.com/ethereum/2019/08/22/solidity-bytecode-metadata/
-// https://www.shawntabrizi.com/ethereum/verify-ethereum-contracts-using-web3-js-and-solc/
+  console.log({ metadata: cbor.decode(metadata) });
+
+  return {
+    metadata,
+    bytecode,
+  };
+}
+
 export const verifyByteCode = (compiledByteCode: string, actualByteCode: string, solidityVersion: string) => {
-  const t = trimByteCode(solidityVersion)
-  return t(compiledByteCode) === t(actualByteCode)
-}
+  const compiled = getBytecodeAndMetadata(compiledByteCode);
+  const actual = getBytecodeAndMetadata(actualByteCode);
 
-
-const trimByteCode = (solidityVersion: string) => (byteCode: string) => {
-  // solidityVersion = 0.1.2 0.4.17
-  const solidityMinorVersion = +(solidityVersion.split('.')[1])
-  const solidityPatchVersion = +(solidityVersion.split('.')[2])
-
-  try {
-    let byteCodeStart, byteCodeEnd
-    if (solidityMinorVersion >= 4 && solidityPatchVersion >= 22) {
-      byteCodeStart = byteCodeStartAfter422
-    } else {
-      byteCodeStart = byteCodeStartBefore422
-    }
-
-    byteCodeEnd = byteCodeEnd417
-    if (solidityMinorVersion >= 5 && solidityPatchVersion >= 10) {
-      byteCodeEnd = byteCodeEnd510
-    }
-    if (solidityMinorVersion >= 5 && solidityPatchVersion >= 11) {
-      byteCodeEnd = byteCodeEnd511
-    }
-
-    return byteCode.split(byteCodeStart)[1].split(byteCodeEnd)[0]
-  } catch
-    (e) {
-  throw new Error('Cant trim bytecode by starting pointer and meta section')
-  }
-}
+  return compiled.bytecode.equals(actual.bytecode);
+};

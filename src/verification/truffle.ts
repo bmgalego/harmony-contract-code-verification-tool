@@ -31,7 +31,7 @@ export const installDependencies = async (directory) => {
 }
 
 export const compile = async (directory) => {
-  execSync(`cd ${directory} && truffle compile`)
+  execSync(`cd ${directory} && npx truffle compile`)
 }
 
 const renameFile = (filename, inExtension, outExtension) => {
